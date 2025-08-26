@@ -32,7 +32,7 @@ class CrazyTimeScraper extends BaseGameScraper {
           isLive: config.isLive,
           provider: config.provider,
           score: null,
-          rating: '',
+          rating: null,
           features: [...config.features],
           bonuses: [],
           paymentMethods: [],

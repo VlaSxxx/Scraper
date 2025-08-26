@@ -599,6 +599,149 @@ router.get('/health', (req, res) => {
   });
 });
 
+// GET /api/db-test - Тест подключения к базе данных
+router.get('/db-test', async (req, res) => {
+  try {
+    // Проверяем подключение к MongoDB
+    const mongoose = require('mongoose');
+    const dbStatus = mongoose.connection.readyState;
+    const dbStates = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+    
+    const isConnected = dbStatus === 1;
+    
+    // Получаем статистику базы данных
+    let dbStats = null;
+    let totalRecords = 0;
+    let recentRecords = [];
+    
+    if (isConnected) {
+      try {
+        totalRecords = await CasinoScore.countDocuments();
+        
+        recentRecords = await CasinoScore.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select('name type provider createdAt scrapedAt');
+          
+        // Получаем статистику по типам игр
+        const typeStats = await CasinoScore.aggregate([
+          { $group: { _id: '$type', count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+        ]);
+        
+        // Получаем статистику по провайдерам
+        const providerStats = await CasinoScore.aggregate([
+          { $match: { provider: { $exists: true, $ne: null } } },
+          { $group: { _id: '$provider', count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+        ]);
+        
+        dbStats = {
+          totalRecords,
+          typeStats,
+          providerStats,
+          recentRecords
+        };
+      } catch (dbError) {
+        console.error('Error getting database stats:', dbError);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Database test completed',
+      timestamp: new Date().toISOString(),
+      database: {
+        status: dbStates[dbStatus],
+        connected: isConnected,
+        stats: dbStats
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Database test failed',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/db-test - Создать тестовую запись в базе данных
+router.post('/db-test', async (req, res) => {
+  try {
+    const testGame = new CasinoScore({
+      name: 'Test Crazy Time',
+      url: 'https://test-casino.com/crazy-time',
+      type: 'game show',
+      description: 'Test game for MongoDB verification',
+      stats: {
+        multiplier: 100,
+        rounds: 50
+      },
+      isLive: true,
+      provider: 'evolution',
+      score: 8.5,
+      rating: 'Very Good',
+      features: ['live', 'game show', 'wheel'],
+      bonuses: ['welcome bonus'],
+      paymentMethods: ['credit card', 'crypto'],
+      licenses: ['MGA'],
+      languages: ['English', 'Russian'],
+      currencies: ['USD', 'EUR'],
+      minDeposit: '$10',
+      maxWithdrawal: '$5000',
+      withdrawalTime: '24 hours',
+      customerSupport: '24/7',
+      mobileCompatible: true,
+      liveChat: true,
+      scrapedAt: new Date()
+    });
+    
+    const savedGame = await testGame.save();
+    
+    res.json({
+      success: true,
+      message: 'Test record created successfully',
+      data: {
+        id: savedGame._id,
+        name: savedGame.name,
+        type: savedGame.type,
+        createdAt: savedGame.createdAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create test record',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/db-test - Удалить тестовые записи
+router.delete('/db-test', async (req, res) => {
+  try {
+    const result = await CasinoScore.deleteMany({ name: 'Test Crazy Time' });
+    
+    res.json({
+      success: true,
+      message: 'Test records cleaned up',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cleanup test records',
+      error: error.message
+    });
+  }
+});
+
 // Оставляем старые endpoints для совместимости
 // GET /api/casinos - Получить список всех казино (совместимость)
 router.get('/casinos', validateQuery, async (req, res) => {

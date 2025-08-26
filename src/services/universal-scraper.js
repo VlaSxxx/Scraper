@@ -1,4 +1,4 @@
-const connectDB = require('../config/database');
+const { connectDB, isDBConnected } = require('../config/database');
 const ScraperFactory = require('./scraper-factory');
 const { getAllGames, getGameConfig } = require('../config/games');
 
@@ -15,9 +15,6 @@ class UniversalScraper {
   async scrapeGame(gameKey) {
     try {
       console.log(`🚀 Starting scraping for game: ${gameKey}`);
-      
-      // Подключаемся к базе данных
-      await connectDB();
       
       // Создаем скрейпер для игры
       const scraper = ScraperFactory.createScraper(gameKey);
@@ -45,9 +42,6 @@ class UniversalScraper {
   async scrapeAllGames() {
     try {
       console.log('🚀 Starting Universal Casino Games Scraper...');
-      
-      // Подключаемся к базе данных
-      await connectDB();
       
       const availableScrapers = ScraperFactory.getAvailableScrapers();
       console.log(`📋 Available scrapers: ${availableScrapers.join(', ')}`);

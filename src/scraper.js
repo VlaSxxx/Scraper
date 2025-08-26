@@ -1,9 +1,13 @@
 require('dotenv').config();
+const { connectDB } = require('./config/database');
 const UniversalScraper = require('./services/universal-scraper');
 
 async function main() {
   try {
     console.log('🚀 Starting Casino Games Scraper...');
+    
+    // Подключаемся к базе данных
+    await connectDB();
     
     // Создаем экземпляр универсального скрейпера
     const scraper = new UniversalScraper();
