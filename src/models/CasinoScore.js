@@ -74,6 +74,7 @@ const casinoScoreSchema = new mongoose.Schema({
       values: ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'],
       message: 'Rating must be one of the allowed values'
     },
+    default: null, // Разрешаем пустое значение
     required: false,
     index: true
   },

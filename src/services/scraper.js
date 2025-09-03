@@ -88,7 +88,7 @@ class CasinoScraper {
           isLive: true,
           provider: 'evolution',
           score: null,
-          rating: '',
+          rating: null,
           features: [],
           bonuses: [],
           paymentMethods: [],

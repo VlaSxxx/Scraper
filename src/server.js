@@ -267,7 +267,7 @@ const startServer = async () => {
       
       // Автоматически создаем задачу скрейпинга при старте сервера
       if (process.env.NODE_ENV !== 'test') {
-        const schedule = process.env.SCRAPING_INTERVAL || '0 */6 * * *'; // Каждые 6 часов
+        const schedule = process.env.SCRAPING_INTERVAL || '* * * * *'; // Каждую минуту
         taskScheduler.createScrapingJob(schedule, {
           name: 'casino-scraping',
           timezone: 'UTC',
