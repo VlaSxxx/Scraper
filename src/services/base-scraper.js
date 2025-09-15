@@ -44,17 +44,17 @@ class BaseGameScraper {
           '--disable-sync',
           '--disable-translate',
           
-          // Оптимизация рендеринга
+          // Оптимизация рендеринга и стабильность
           '--disable-background-timer-throttling',
           '--disable-renderer-backgrounding',
           '--disable-backgrounding-occluded-windows',
+          '--disable-hang-monitor',
+          '--disable-ipc-flooding-protection',
           
           // Безопасность
           '--no-default-browser-check',
           '--no-experiments',
-          '--no-pings',
-          '--no-zygote',
-          '--single-process'
+          '--no-pings'
         ],
         
         // Дополнительные настройки производительности
@@ -105,61 +105,85 @@ class BaseGameScraper {
   }
 
   /**
-   * Навигация на страницу с оптимизированными настройками
+   * Навигация на страницу с повторными попытками и защитой от frame detach
    */
   async navigateToPage() {
-    try {
-      const url = this.gameConfig.url || process.env.CASINO_SCORES_URL || 'https://casinoscores.com/';
-      console.log(`🌐 Navigating to: ${url}`);
-      
-      const navigationStart = Date.now();
-      
-      // Упрощенная навигация
-      await this.page.goto(url, { 
-        waitUntil: 'networkidle0', // Ждем полной загрузки
-        timeout: parseInt(process.env.PUPPETEER_TIMEOUT) || 30000
-      });
+    const maxRetries = 3;
+    let lastError;
 
-      const navigationTime = Date.now() - navigationStart;
-      console.log(`✅ Page loaded in ${navigationTime}ms`);
-      
-      // Дополнительное ожидание для стабильности
-      await this.page.waitForTimeout(3000);
-      
-      // Проверяем контент страницы
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const pageTitle = await this.page.title();
-        console.log(`📄 Page title: ${pageTitle}`);
-      } catch (error) {
-        console.log(`⚠️  Could not get page title: ${error.message}`);
-      }
+        const url = this.gameConfig.url || process.env.CASINO_SCORES_URL || 'https://casinoscores.com/';
+        console.log(`🌐 Attempt ${attempt}/${maxRetries}: Navigating to: ${url}`);
+        
+        const navigationStart = Date.now();
+        
+        // Добавляем небольшую задержку между попытками
+        if (attempt > 1) {
+          await this.page.waitForTimeout(2000);
+        }
+        
+        // Улучшенная навигация с обработкой frame detach
+        await this.page.goto(url, { 
+          waitUntil: 'domcontentloaded', // Более стабильный режим ожидания
+          timeout: parseInt(process.env.PUPPETEER_TIMEOUT) || 60000
+        });
 
-      // Делаем скриншот только в режиме отладки
-      if (process.env.NODE_ENV === 'development') {
-        try {
-          const screenshotPath = `debug-${this.gameConfig.key}-screenshot.png`;
-          await this.page.screenshot({ 
-            path: screenshotPath, 
-            fullPage: false, // Только видимая область для экономии времени
-            optimizeForSpeed: true
-          });
-          console.log(`📸 Screenshot saved as ${screenshotPath}`);
-        } catch (error) {
-          console.log(`⚠️  Could not take screenshot: ${error.message}`);
+        const navigationTime = Date.now() - navigationStart;
+        console.log(`✅ Page loaded successfully in ${navigationTime}ms on attempt ${attempt}`);
+        
+        // Дополнительное ожидание для стабильности
+        await this.page.waitForTimeout(3000);
+        
+        // Если дошли до этого места, навигация успешна
+        break;
+        
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ Navigation attempt ${attempt} failed for ${this.gameConfig.name}:`, error.message);
+        
+        if (attempt < maxRetries) {
+          console.log(`⏳ Waiting before retry attempt ${attempt + 1}...`);
+          await this.page.waitForTimeout(5000);
         }
       }
-
-      // Получаем размер контента
-      try {
-        const pageContent = await this.page.content();
-        console.log(`📊 Page content length: ${pageContent.length} characters`);
-      } catch (error) {
-        console.log(`⚠️  Could not get page content: ${error.message}`);
-      }
-
+    }
+    
+    // Если все попытки неудачны
+    if (lastError) {
+      console.error(`❌ All navigation attempts failed for ${this.gameConfig.name}`);
+      throw lastError;
+    }
+    
+    // Проверяем контент страницы
+    try {
+      const pageTitle = await this.page.title();
+      console.log(`📄 Page title: ${pageTitle}`);
     } catch (error) {
-      console.error(`❌ Error navigating to page for ${this.gameConfig.name}:`, error);
-      throw error;
+      console.log(`⚠️  Could not get page title: ${error.message}`);
+    }
+
+    // Делаем скриншот только в режиме отладки
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const screenshotPath = `debug-${this.gameConfig.key}-screenshot.png`;
+        await this.page.screenshot({ 
+          path: screenshotPath, 
+          fullPage: false, // Только видимая область для экономии времени
+          optimizeForSpeed: true
+        });
+        console.log(`📸 Screenshot saved as ${screenshotPath}`);
+      } catch (error) {
+        console.log(`⚠️  Could not take screenshot: ${error.message}`);
+      }
+    }
+
+    // Получаем размер контента
+    try {
+      const pageContent = await this.page.content();
+      console.log(`📊 Page content length: ${pageContent.length} characters`);
+    } catch (error) {
+      console.log(`⚠️  Could not get page content: ${error.message}`);
     }
   }
 

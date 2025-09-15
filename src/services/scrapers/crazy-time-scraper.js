@@ -1,6 +1,6 @@
-const EnhancedBaseScraper = require('../enhanced-base-scraper');
+const BaseGameScraper = require('../base-scraper');
 
-class CrazyTimeScraper extends EnhancedBaseScraper {
+class CrazyTimeScraper extends BaseGameScraper {
   constructor() {
     const gameConfig = {
       key: 'crazy-time',

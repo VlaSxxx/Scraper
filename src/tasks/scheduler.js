@@ -1,11 +1,11 @@
 const cron = require('node-cron');
-const CasinoScraper = require('../services/scraper');
+const UniversalScraper = require('../services/universal-scraper');
 const CasinoScore = require('../models/CasinoScore');
 
 class TaskScheduler {
   constructor() {
     this.jobs = new Map();
-    this.scraper = new CasinoScraper();
+    this.scraper = new UniversalScraper();
     this.isRunning = false;
     this.stats = {
       totalRuns: 0,
@@ -93,8 +93,8 @@ class TaskScheduler {
         jobInfo.nextExecution = this.getNextExecutionTime(jobInfo.schedule, jobInfo.timezone);
       }
 
-      // Выполняем скрейпинг
-      const results = await this.scraper.scrapeAndSave();
+      // Выполняем скрейпинг всех игр
+      const results = await this.scraper.scrapeAllGames();
       
       const executionTime = Date.now() - startTime;
       this.stats.successfulRuns++;
@@ -103,14 +103,14 @@ class TaskScheduler {
       this.stats.averageExecutionTime = this.calculateAverageExecutionTime(executionTime);
 
       console.log(`✅ [${new Date().toISOString()}] Task "${jobName}" completed successfully`);
-      console.log(`📊 Processed ${results.length} casinos in ${executionTime}ms`);
+      console.log(`📊 Processed ${results.summary.totalProcessed} records from ${results.summary.successfulGames} games in ${executionTime}ms`);
       console.log(`📈 Average execution time: ${this.stats.averageExecutionTime.toFixed(2)}ms`);
 
       // Логируем статистику
       await this.logTaskExecution(jobName, {
         status: 'success',
         executionTime,
-        processedItems: results.length,
+        processedItems: results.summary.totalProcessed,
         timestamp: new Date()
       });
 
