@@ -1,13 +1,10 @@
 require('dotenv').config();
-const { connectDB } = require('./config/database');
-const UniversalScraper = require('./services/universal-scraper');
+const UniversalScraper = require('./scrapers/universal-scraper');
 
 async function main() {
   try {
-    console.log('🚀 Starting Casino Games Scraper...');
-    
-    // Подключаемся к базе данных
-    await connectDB();
+    console.log('🚀 Starting Casino Games Scraper (Standalone Mode)...');
+    console.log('📊 Running without database - data will not be saved');
     
     // Создаем экземпляр универсального скрейпера
     const scraper = new UniversalScraper();
@@ -46,6 +43,17 @@ async function main() {
         
         console.log(`📊 Average score: ${avgScore.toFixed(2)}/10`);
         console.log(`🏆 Top game: ${topGame.name} (${topGame.score}/10)`);
+        
+        // Выводим все данные в режиме standalone
+        console.log('\n📋 Scraped data:');
+        results.forEach((game, index) => {
+          console.log(`${index + 1}. ${game.name}`);
+          console.log(`   Type: ${game.type}`);
+          console.log(`   Provider: ${game.provider}`);
+          console.log(`   Score: ${game.score || 'N/A'}`);
+          console.log(`   Features: ${game.features?.join(', ') || 'N/A'}`);
+          console.log('   ---');
+        });
       }
       
     } else if (gameType && args[0] === 'type') {
@@ -59,6 +67,11 @@ async function main() {
       // Выводим детали по каждой игре
       Object.entries(results.results).forEach(([gameKey, result]) => {
         console.log(`  ✅ ${gameKey}: ${result.count} records`);
+        if (result.data && result.data.length > 0) {
+          result.data.forEach(game => {
+            console.log(`    - ${game.name} (${game.type})`);
+          });
+        }
       });
       
       if (Object.keys(results.errors).length > 0) {
@@ -81,6 +94,11 @@ async function main() {
         console.log('\n🎮 Successful games:');
         Object.entries(results.results).forEach(([gameKey, result]) => {
           console.log(`  ✅ ${gameKey}: ${result.count} records`);
+          if (result.data && result.data.length > 0) {
+            result.data.forEach(game => {
+              console.log(`    - ${game.name} (${game.type}, Score: ${game.score || 'N/A'})`);
+            });
+          }
         });
       }
       
@@ -91,6 +109,9 @@ async function main() {
         });
       }
     }
+    
+    console.log('\n💾 Note: Data was not saved to database (standalone mode)');
+    console.log('🔗 To save data, ensure MongoDB is running and use: node src/scraper.js');
     
     process.exit(0);
     
@@ -113,18 +134,19 @@ process.on('SIGTERM', () => {
 
 // Показываем справку по использованию
 function showUsage() {
-  console.log('\n📖 Usage:');
-  console.log('  node src/scraper.js                    - Scrape all available games');
-  console.log('  node src/scraper.js <game-key>         - Scrape specific game');
-  console.log('  node src/scraper.js type <game-type>   - Scrape games by type');
+  console.log('\n📖 Standalone Scraper Usage (no database required):');
+  console.log('  node src/scraper-standalone.js                    - Scrape all available games');
+  console.log('  node src/scraper-standalone.js <game-key>         - Scrape specific game');
+  console.log('  node src/scraper-standalone.js type <game-type>   - Scrape games by type');
   console.log('\n🎮 Available game keys:');
   console.log('  crazy-time, monopoly-live, deal-or-no-deal, lightning-roulette, blackjack-live, baccarat-live');
   console.log('\n🎯 Available game types:');
   console.log('  game show, roulette, blackjack, baccarat');
   console.log('\n💡 Examples:');
-  console.log('  node src/scraper.js crazy-time');
-  console.log('  node src/scraper.js type "game show"');
-  console.log('  node src/scraper.js all');
+  console.log('  node src/scraper-standalone.js crazy-time');
+  console.log('  node src/scraper-standalone.js type "game show"');
+  console.log('  node src/scraper-standalone.js all');
+  console.log('\n💾 Note: This standalone version does not require MongoDB and will not save data');
 }
 
 // Показываем справку если запрошена
@@ -135,3 +157,4 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 // Запускаем основную функцию
 main();
+

@@ -107,15 +107,15 @@ const _connectDB = async () => {
     connectionPromise = null;
     
     // Если MongoDB недоступен, выводим предупреждение но не останавливаем приложение
+    console.warn('⚠️  MongoDB is not available. Running in fallback mode without database.');
+    console.warn('📊 Scraping will work but data will not be saved.');
+    
     if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️  MongoDB is not available. Some features may not work properly.');
-      console.warn('💡 To install MongoDB:');
-      console.warn('   1. Download from https://www.mongodb.com/try/download/community');
-      console.warn('   2. Or use Docker: docker run -d -p 27017:27017 --name mongodb mongo:latest');
-      console.warn('   3. Or use MongoDB Atlas (cloud): https://www.mongodb.com/atlas');
-    } else {
-      throw error; // В продакшене останавливаем приложение если нет MongoDB
+      console.warn(' no MongoDB:');
     }
+    
+    // Не останавливаем приложение даже в продакшене - позволяем работать без БД
+    return null;
   }
 };
 

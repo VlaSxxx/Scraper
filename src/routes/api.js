@@ -1,7 +1,7 @@
 const express = require('express');
 const Joi = require('joi');
 const CasinoScore = require('../models/CasinoScore');
-const UniversalScraper = require('../services/universal-scraper');
+const ScraperFactory = require('../scrapers/scraper-factory');
 const { getAllGames, getGamesByType, getGamesByProvider } = require('../config/games');
 
 const router = express.Router();
@@ -409,12 +409,11 @@ router.get('/games/provider/:provider', validateQuery, async (req, res) => {
 // GET /api/supported-games - Получить информацию о поддерживаемых играх
 router.get('/supported-games', async (req, res) => {
   try {
-    const scraper = new UniversalScraper();
-    const gamesInfo = scraper.getSupportedGamesInfo();
+    const supportedGames = ScraperFactory.getSupportedGames();
     
     res.json({
       success: true,
-      data: gamesInfo
+      data: supportedGames
     });
 
   } catch (error) {
@@ -431,8 +430,8 @@ router.post('/scrape/:gameKey', validateGameKey, async (req, res) => {
   try {
     const { gameKey } = req.params;
     
-    const scraper = new UniversalScraper();
-    const results = await scraper.scrapeGame(gameKey);
+    const scraper = ScraperFactory.createScraper(gameKey);
+    const results = await scraper.scrapeAndSave();
     
     res.json({
       success: true,
@@ -455,8 +454,17 @@ router.post('/scrape/:gameKey', validateGameKey, async (req, res) => {
 // POST /api/scrape/all - Запустить скрейпинг всех игр
 router.post('/scrape/all', async (req, res) => {
   try {
-    const scraper = new UniversalScraper();
-    const results = await scraper.scrapeAllGames();
+    const allScrapers = ScraperFactory.createAllScrapers();
+    const results = [];
+    
+    for (const scraper of allScrapers) {
+      try {
+        const gameResults = await scraper.scrapeAndSave();
+        results.push(...gameResults);
+      } catch (error) {
+        console.error('Error scraping with scraper:', error);
+      }
+    }
     
     res.json({
       success: true,
@@ -472,13 +480,23 @@ router.post('/scrape/all', async (req, res) => {
   }
 });
 
-// POST /api/scrape/type/:type - Запустить скрейпинг игр определенного типа
+// POST /api/scrape/type/:type - Запустить скрейпинг игр определенного типа  
 router.post('/scrape/type/:type', async (req, res) => {
   try {
     const { type } = req.params;
     
-    const scraper = new UniversalScraper();
-    const results = await scraper.scrapeGamesByType(type);
+    const gamesByType = getGamesByType(type);
+    const results = [];
+    
+    for (const game of gamesByType) {
+      try {
+        const scraper = ScraperFactory.createScraper(game.key);
+        const gameResults = await scraper.scrapeAndSave();
+        results.push(...gameResults);
+      } catch (error) {
+        console.error(`Error scraping game ${game.key}:`, error);
+      }
+    }
     
     res.json({
       success: true,

@@ -1,4 +1,4 @@
-const BaseGameScraper = require('../base-scraper');
+const BaseGameScraper = require('./base-scraper');
 
 class CrazyTimeScraper extends BaseGameScraper {
   constructor() {

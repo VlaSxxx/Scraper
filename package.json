@@ -7,6 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "scrape": "node src/scraper.js",
+    "scrape:standalone": "node src/scraper-standalone.js",
+    "scrape:nodb": "node src/scraper-standalone.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:api": "node test-direct-api.js",
     "test:api:basic": "node test-api.js"

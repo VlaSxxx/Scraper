@@ -1,11 +1,10 @@
 const cron = require('node-cron');
-const UniversalScraper = require('../services/universal-scraper');
+const ScraperFactory = require('../scrapers/scraper-factory');
 const CasinoScore = require('../models/CasinoScore');
 
 class TaskScheduler {
   constructor() {
     this.jobs = new Map();
-    this.scraper = new UniversalScraper();
     this.isRunning = false;
     this.stats = {
       totalRuns: 0,
@@ -94,7 +93,27 @@ class TaskScheduler {
       }
 
       // Выполняем скрейпинг всех игр
-      const results = await this.scraper.scrapeAllGames();
+      const allScrapers = ScraperFactory.createAllScrapers();
+      const allResults = [];
+      let successfulGames = 0;
+      
+      for (const scraper of allScrapers) {
+        try {
+          const gameResults = await scraper.scrapeAndSave();
+          allResults.push(...gameResults);
+          successfulGames++;
+        } catch (error) {
+          console.error('Error in scheduled scraping:', error);
+        }
+      }
+      
+      const results = {
+        summary: {
+          totalProcessed: allResults.length,
+          successfulGames: successfulGames
+        },
+        data: allResults
+      };
       
       const executionTime = Date.now() - startTime;
       this.stats.successfulRuns++;
@@ -247,10 +266,27 @@ class TaskScheduler {
   }
 
   /**
-   * Получает статистику по собранным данным
+   * Получает статистику по собранным данным с fallback режимом
    */
   async getScrapingStats() {
     try {
+      // Проверяем доступность БД
+      const { isDBConnected } = require('../config/database');
+      
+      if (!isDBConnected()) {
+        console.warn('⚠️  Database not available, returning fallback stats');
+        return {
+          totalCasinos: 0,
+          averageScore: 0,
+          ratingDistribution: {},
+          lastUpdated: null,
+          schedulerStats: this.stats,
+          fallbackMode: true,
+          message: 'Database not available - showing scheduler stats only'
+        };
+      }
+
+      const CasinoScore = require('../models/CasinoScore');
       const [
         totalCasinos,
         averageScore,
@@ -275,20 +311,38 @@ class TaskScheduler {
           return acc;
         }, {}),
         lastUpdated: latestUpdate?.scrapedAt || null,
-        schedulerStats: this.stats
+        schedulerStats: this.stats,
+        fallbackMode: false
       };
     } catch (error) {
-      console.error('Error getting scraping stats:', error);
-      throw error;
+      console.error('Error getting scraping stats, returning fallback:', error);
+      return {
+        totalCasinos: 0,
+        averageScore: 0,
+        ratingDistribution: {},
+        lastUpdated: null,
+        schedulerStats: this.stats,
+        fallbackMode: true,
+        error: error.message
+      };
     }
   }
 
   /**
-   * Очищает старые данные (опционально)
+   * Очищает старые данные (опционально) с fallback режимом
    * @param {number} daysToKeep - Количество дней для хранения данных
    */
   async cleanupOldData(daysToKeep = 30) {
     try {
+      // Проверяем доступность БД
+      const { isDBConnected } = require('../config/database');
+      
+      if (!isDBConnected()) {
+        console.warn('⚠️  Database not available, skipping cleanup');
+        return 0;
+      }
+
+      const CasinoScore = require('../models/CasinoScore');
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
@@ -300,7 +354,7 @@ class TaskScheduler {
       return result.deletedCount;
     } catch (error) {
       console.error('Error cleaning up old data:', error);
-      throw error;
+      return 0;
     }
   }
 }

@@ -193,64 +193,26 @@ casinoScoreSchema.pre('findOneAndUpdate', function(next) {
   next();
 });
 
-// Статические методы для удобных запросов
-casinoScoreSchema.statics.findTopRated = function(limit = 10) {
-  return this.find({ score: { $gte: 8 } })
-    .sort({ score: -1, scrapedAt: -1 })
-    .limit(limit);
-};
+// Статические методы перенесены в CasinoScoreRepository
 
-casinoScoreSchema.statics.findByType = function(type, limit = 20) {
-  return this.find({ type })
-    .sort({ score: -1, scrapedAt: -1 })
-    .limit(limit);
-};
+// Методы экземпляра перенесены в CasinoScoreService
 
-casinoScoreSchema.statics.findLiveGames = function() {
-  return this.find({ isLive: true })
-    .sort({ score: -1, scrapedAt: -1 });
-};
+// Базовые валидации схемы оставлены в модели для работы Mongoose
+// Сложная валидация бизнес-правил перенесена в CasinoValidationService
 
-casinoScoreSchema.statics.findRecentlyUpdated = function(days = 7) {
-  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  return this.find({ scrapedAt: { $gte: cutoffDate } })
-    .sort({ scrapedAt: -1 });
-};
-
-// Методы экземпляра
-casinoScoreSchema.methods.updateScore = function(newScore) {
-  this.score = newScore;
-  this.lastUpdated = new Date();
-  return this.save();
-};
-
-casinoScoreSchema.methods.addFeature = function(feature) {
-  if (!this.features.includes(feature)) {
-    this.features.push(feature);
-  }
-  return this.save();
-};
-
-// Валидация на уровне схемы
+// Простые валидации длины массивов (уровень схемы)
 casinoScoreSchema.path('features').validate(function(features) {
-  if (features && features.length > 20) {
-    return false;
-  }
-  return true;
+  return !features || features.length <= 20;
 }, 'Cannot have more than 20 features');
 
 casinoScoreSchema.path('paymentMethods').validate(function(methods) {
-  if (methods && methods.length > 50) {
-    return false;
-  }
-  return true;
+  return !methods || methods.length <= 50;
 }, 'Cannot have more than 50 payment methods');
 
-// Обработка ошибок валидации
+// Базовая обработка ошибок схемы
 casinoScoreSchema.post('save', function(error, doc, next) {
   if (error.name === 'ValidationError') {
-    const errors = Object.values(error.errors).map(err => err.message);
-    console.error('Validation errors:', errors);
+    console.error('Schema validation errors:', Object.keys(error.errors));
   }
   next();
 });

@@ -1,13 +1,15 @@
 const { getGameConfig, isGameSupported } = require('../config/games');
 
 // Импортируем все скрейперы
-const CrazyTimeScraper = require('./scrapers/crazy-time-scraper');
-const MonopolyLiveScraper = require('./scrapers/monopoly-live-scraper');
+const CrazyTimeScraper = require('./crazy-time-scraper');
+const MonopolyLiveScraper = require('./monopoly-live-scraper');
+const CasinoScoresScraper = require('./casino-scores-scraper');
 
 // Реестр скрейперов
 const scraperRegistry = {
   'crazy-time': CrazyTimeScraper,
-  'monopoly-live': MonopolyLiveScraper
+  'monopoly-live': MonopolyLiveScraper,
+  'casino-scores': CasinoScoresScraper
 };
 
 class ScraperFactory {

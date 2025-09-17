@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { connectDB, getConnectionStats } = require('./config/database');
 const apiRoutes = require('./routes/api');
 const directApiRoutes = require('./routes/direct-api');
+const debugApiRoutes = require('./routes/debug-api');
 const errorHandler = require('./middleware/errorHandler');
 const TaskScheduler = require('./tasks/scheduler');
 const taskRoutes = require('./routes/tasks');
@@ -135,7 +136,14 @@ app.use((req, res, next) => {
  */
 app.get('/health', async (req, res) => {
   try {
-    const dbStats = getConnectionStats();
+    // Проверяем БД только если она доступна
+    let dbStats = { isConnected: false, readyState: 0, host: null, name: null };
+    try {
+      dbStats = getConnectionStats();
+    } catch (dbError) {
+      console.log('Database stats not available:', dbError.message);
+    }
+    
     const uptime = process.uptime();
     const memoryUsage = process.memoryUsage();
     
@@ -150,7 +158,8 @@ app.get('/health', async (req, res) => {
         connected: dbStats.isConnected,
         readyState: dbStats.readyState,
         host: dbStats.host,
-        name: dbStats.name
+        name: dbStats.name,
+        mode: dbStats.isConnected ? 'full' : 'fallback'
       },
       memory: {
         rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
@@ -175,6 +184,14 @@ app.get('/health', async (req, res) => {
 app.use('/api', directApiRoutes); // Расширенные эндпоинты (высший приоритет)
 app.use('/api', apiRoutes); // Базовые эндпоинты
 app.use('/api/tasks', taskRoutes); // Задачи
+
+/**
+ * Debug роуты (только в development режиме)
+ */
+if (process.env.NODE_ENV === 'development' || process.env.ENABLE_DEBUG_API === 'true') {
+  app.use('/debug', debugApiRoutes);
+  console.log('🐛 Debug API routes enabled at /debug');
+}
 
 /**
  * Корневой маршрут с улучшенной документацией
@@ -254,9 +271,15 @@ app.use(errorHandler);
  */
 const startServer = async () => {
   try {
-    // Подключаемся к базе данных
-    console.log('🔗 Connecting to database...');
-    await connectDB();
+    // Пытаемся подключиться к базе данных (не критично для запуска)
+    console.log('🔗 Attempting to connect to database...');
+    try {
+      await connectDB();
+      console.log('✅ Database connected successfully');
+    } catch (dbError) {
+      console.warn('⚠️  Database connection failed, continuing without database...');
+      console.warn('📊 API will work in read-only mode, scraping data will not be saved');
+    }
     
     // Запускаем сервер
     const server = app.listen(PORT, () => {

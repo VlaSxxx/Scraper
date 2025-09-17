@@ -196,20 +196,32 @@ class BaseGameScraper {
   }
 
   /**
-   * Сохранение данных в базу данных с оптимизированной обработкой
+   * Сохранение данных в базу данных с fallback режимом
    * @param {Array} games - Массив данных игр
-   * @returns {Promise<Array>} Сохраненные данные
+   * @returns {Promise<Array>} Сохраненные данные (или данные без сохранения)
    */
   async saveToDatabase(games) {
     try {
-      console.log(`💾 Saving ${this.gameConfig.name} to database...`);
+      console.log(`💾 Attempting to save ${this.gameConfig.name} to database...`);
       
       // Проверяем подключение к базе данных
       const { connectDB, isDBConnected } = require('../config/database');
       
+      // Пытаемся подключиться только если БД не подключена
       if (!isDBConnected()) {
         console.log('🔗 Database not connected, attempting to connect...');
-        await connectDB();
+        try {
+          await connectDB();
+        } catch (connectError) {
+          console.warn('⚠️  Failed to connect to database, running in fallback mode');
+          return this.handleFallbackMode(games);
+        }
+      }
+      
+      // Если БД все еще недоступна, используем fallback
+      if (!isDBConnected()) {
+        console.warn('⚠️  Database still not available, running in fallback mode');
+        return this.handleFallbackMode(games);
       }
       
       const CasinoScore = require('../models/CasinoScore');
@@ -262,9 +274,37 @@ class BaseGameScraper {
       return savedGames;
 
     } catch (error) {
-      console.error('❌ Error saving to database:', error);
-      throw error;
+      console.error('❌ Error saving to database, falling back to no-save mode:', error);
+      return this.handleFallbackMode(games);
     }
+  }
+
+  /**
+   * Обработка fallback режима когда БД недоступна
+   * @param {Array} games - Массив данных игр
+   * @returns {Array} Данные с временными метками
+   */
+  handleFallbackMode(games) {
+    console.log(`📊 Running in fallback mode - data will not be saved to database`);
+    console.log(`✅ Successfully scraped ${games.length} ${this.gameConfig.name} records`);
+    
+    // Добавляем временные метки и возвращаем данные как есть
+    const processedGames = games.map(game => ({
+      ...game,
+      scrapedAt: new Date(),
+      savedToDatabase: false,
+      fallbackMode: true
+    }));
+    
+    // Выводим краткую статистику
+    if (processedGames.length > 0) {
+      console.log(`📋 Scraped games:`);
+      processedGames.forEach((game, index) => {
+        console.log(`  ${index + 1}. ${game.name} (${game.type})`);
+      });
+    }
+    
+    return processedGames;
   }
 
   /**

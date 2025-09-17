@@ -71,6 +71,18 @@ const gamesConfig = {
     features: ['live', 'baccarat', 'card game'],
     description: 'Live Baccarat is an elegant card game played with a real dealer in a live casino setting.',
     defaultUrl: 'https://casinoscores.com/baccarat-live'
+  },
+  'casino-scores': {
+    key: 'casino-scores',
+    name: 'Casino Scores',
+    type: 'casino',
+    provider: 'various',
+    isLive: false,
+    url: 'https://casinoscores.com/',
+    searchKeywords: ['casino', 'bonus', 'payment', 'license'],
+    features: ['casino reviews', 'bonuses', 'payment methods'],
+    description: 'Comprehensive casino reviews and ratings from Casino Scores',
+    defaultUrl: 'https://casinoscores.com/'
   }
 };
 

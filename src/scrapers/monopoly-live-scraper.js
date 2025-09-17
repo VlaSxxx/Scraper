@@ -1,4 +1,4 @@
-const BaseGameScraper = require('../base-scraper');
+const BaseGameScraper = require('./base-scraper');
 
 class MonopolyLiveScraper extends BaseGameScraper {
   constructor() {
