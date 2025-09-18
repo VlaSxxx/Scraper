@@ -17,10 +17,18 @@ class CasinoListDto {
     this.provider = casino.provider;
     this.score = casino.score;
     this.rating = casino.rating;
-    this.isLive = casino.isLive;
-    this.mobileCompatible = casino.mobileCompatible;
-    this.liveChat = casino.liveChat;
     this.scrapedAt = casino.scrapedAt;
+    
+    // Добавляем boolean поля только если они true
+    if (casino.isLive === true) {
+      this.isLive = true;
+    }
+    if (casino.mobileCompatible === true) {
+      this.mobileCompatible = true;
+    }
+    if (casino.liveChat === true) {
+      this.liveChat = true;
+    }
     
     // Вычисляемые поля
     this.displayScore = formatters.score.formatScoreDisplay(casino.score);
@@ -40,16 +48,52 @@ class CasinoDetailDto extends CasinoListDto {
     
     // Дополнительные поля для детального просмотра
     this.description = casino.description;
-    this.features = casino.features || [];
-    this.bonuses = casino.bonuses || [];
-    this.paymentMethods = casino.paymentMethods || [];
-    this.licenses = casino.licenses || [];
-    this.languages = casino.languages || [];
-    this.currencies = casino.currencies || [];
-    this.minDeposit = casino.minDeposit;
-    this.maxWithdrawal = casino.maxWithdrawal;
-    this.withdrawalTime = casino.withdrawalTime;
-    this.customerSupport = casino.customerSupport;
+    
+    // Добавляем массивы только если они не пустые
+    if (casino.features && casino.features.length > 0) {
+      this.features = casino.features;
+    }
+    if (casino.bonuses && casino.bonuses.length > 0) {
+      this.bonuses = casino.bonuses;
+    }
+    if (casino.paymentMethods && casino.paymentMethods.length > 0) {
+      this.paymentMethods = casino.paymentMethods;
+    }
+    if (casino.licenses && casino.licenses.length > 0) {
+      this.licenses = casino.licenses;
+    }
+    if (casino.languages && casino.languages.length > 0) {
+      this.languages = casino.languages;
+    }
+    if (casino.currencies && casino.currencies.length > 0) {
+      this.currencies = casino.currencies;
+    }
+    
+    // Добавляем строковые поля только если они не пустые
+    if (casino.minDeposit && casino.minDeposit.trim() !== '') {
+      this.minDeposit = casino.minDeposit;
+    }
+    if (casino.maxWithdrawal && casino.maxWithdrawal.trim() !== '') {
+      this.maxWithdrawal = casino.maxWithdrawal;
+    }
+    if (casino.withdrawalTime && casino.withdrawalTime.trim() !== '') {
+      this.withdrawalTime = casino.withdrawalTime;
+    }
+    if (casino.customerSupport && casino.customerSupport.trim() !== '') {
+      this.customerSupport = casino.customerSupport;
+    }
+    
+    // Добавляем boolean поля только если они true
+    if (casino.isLive === true) {
+      this.isLive = true;
+    }
+    if (casino.mobileCompatible === true) {
+      this.mobileCompatible = true;
+    }
+    if (casino.liveChat === true) {
+      this.liveChat = true;
+    }
+    
     this.stats = casino.stats || {};
     this.metadata = casino.metadata || {};
     this.lastUpdated = casino.lastUpdated;
@@ -61,10 +105,10 @@ class CasinoDetailDto extends CasinoListDto {
     this.qualityDescription = formatters.score.getQualityDescription(casino.score);
     this.scoreColor = formatters.score.getScoreColor(casino.score);
     this.scoreCssClass = formatters.score.getScoreCSSClass(casino.score);
-    this.featuresCount = this.features.length;
-    this.paymentMethodsCount = this.paymentMethods.length;
-    this.supportedLanguagesCount = this.languages.length;
-    this.supportedCurrenciesCount = this.currencies.length;
+    this.featuresCount = this.features ? this.features.length : 0;
+    this.paymentMethodsCount = this.paymentMethods ? this.paymentMethods.length : 0;
+    this.supportedLanguagesCount = this.languages ? this.languages.length : 0;
+    this.supportedCurrenciesCount = this.currencies ? this.currencies.length : 0;
     
     // Форматированные даты
     this.createdAtFormatted = formatters.date.formatToReadable(casino.createdAt);
@@ -86,19 +130,49 @@ class CasinoCreateDto {
     this.provider = data.provider;
     this.score = data.score;
     this.rating = data.rating;
-    this.isLive = Boolean(data.isLive);
-    this.mobileCompatible = Boolean(data.mobileCompatible);
-    this.liveChat = Boolean(data.liveChat);
-    this.features = Array.isArray(data.features) ? data.features : [];
-    this.bonuses = Array.isArray(data.bonuses) ? data.bonuses : [];
-    this.paymentMethods = Array.isArray(data.paymentMethods) ? data.paymentMethods : [];
-    this.licenses = Array.isArray(data.licenses) ? data.licenses : [];
-    this.languages = Array.isArray(data.languages) ? data.languages : [];
-    this.currencies = Array.isArray(data.currencies) ? data.currencies : [];
-    this.minDeposit = data.minDeposit;
-    this.maxWithdrawal = data.maxWithdrawal;
-    this.withdrawalTime = data.withdrawalTime;
-    this.customerSupport = data.customerSupport;
+    
+    // Добавляем boolean поля только если они true
+    if (data.isLive === true) {
+      this.isLive = true;
+    }
+    if (data.mobileCompatible === true) {
+      this.mobileCompatible = true;
+    }
+    if (data.liveChat === true) {
+      this.liveChat = true;
+    }
+    // Добавляем массивы только если они не пустые
+    if (Array.isArray(data.features) && data.features.length > 0) {
+      this.features = data.features;
+    }
+    if (Array.isArray(data.bonuses) && data.bonuses.length > 0) {
+      this.bonuses = data.bonuses;
+    }
+    if (Array.isArray(data.paymentMethods) && data.paymentMethods.length > 0) {
+      this.paymentMethods = data.paymentMethods;
+    }
+    if (Array.isArray(data.licenses) && data.licenses.length > 0) {
+      this.licenses = data.licenses;
+    }
+    if (Array.isArray(data.languages) && data.languages.length > 0) {
+      this.languages = data.languages;
+    }
+    if (Array.isArray(data.currencies) && data.currencies.length > 0) {
+      this.currencies = data.currencies;
+    }
+    // Добавляем строковые поля только если они не пустые
+    if (data.minDeposit && data.minDeposit.trim() !== '') {
+      this.minDeposit = data.minDeposit;
+    }
+    if (data.maxWithdrawal && data.maxWithdrawal.trim() !== '') {
+      this.maxWithdrawal = data.maxWithdrawal;
+    }
+    if (data.withdrawalTime && data.withdrawalTime.trim() !== '') {
+      this.withdrawalTime = data.withdrawalTime;
+    }
+    if (data.customerSupport && data.customerSupport.trim() !== '') {
+      this.customerSupport = data.customerSupport;
+    }
     this.stats = data.stats || {};
     this.metadata = data.metadata || {};
   }

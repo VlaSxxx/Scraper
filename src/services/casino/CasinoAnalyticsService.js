@@ -268,19 +268,25 @@ class CasinoAnalyticsService {
       }
 
       return {
-        casinos: validCasinos.map(casino => ({
-          id: casino._id,
-          name: casino.name,
-          score: casino.score,
-          rating: casino.rating,
-          type: casino.type,
-          provider: casino.provider,
-          isLive: casino.isLive,
-          mobileCompatible: casino.mobileCompatible,
-          liveChat: casino.liveChat,
-          featuresCount: casino.features?.length || 0,
-          paymentMethodsCount: casino.paymentMethods?.length || 0
-        })),
+        casinos: validCasinos.map(casino => {
+          const result = {
+            id: casino._id,
+            name: casino.name,
+            score: casino.score,
+            rating: casino.rating,
+            type: casino.type,
+            provider: casino.provider,
+            featuresCount: casino.features?.length || 0,
+            paymentMethodsCount: casino.paymentMethods?.length || 0
+          };
+          
+          // Добавляем boolean поля только если они true
+          if (casino.isLive === true) result.isLive = true;
+          if (casino.mobileCompatible === true) result.mobileCompatible = true;
+          if (casino.liveChat === true) result.liveChat = true;
+          
+          return result;
+        }),
         comparison: {
           highestScore: Math.max(...validCasinos.map(c => c.score || 0)),
           lowestScore: Math.min(...validCasinos.map(c => c.score || 0)),

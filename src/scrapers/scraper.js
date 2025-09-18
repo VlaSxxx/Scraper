@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { connectDB } = require('./config/database');
-const UniversalScraper = require('./services/universal-scraper');
+const UniversalScraper = require('./universal-scraper');
 
 async function main() {
   try {

@@ -449,7 +449,7 @@ class CasinoScoresScraper extends BaseGameScraper {
               }
             });
 
-            // Создаем объект казино
+            // Создаем объект казино с базовыми обязательными полями
             const casino = {
               name: casinoName,
               url: casinoUrl || 'https://casinoscores.com/',
@@ -460,23 +460,72 @@ class CasinoScoresScraper extends BaseGameScraper {
                 scrapedFrom: window.location.href,
                 elementIndex: index
               },
-              isLive: false,
-              provider: 'various',
-              score: score,
-              rating: score ? (score >= 8 ? 'Excellent' : score >= 6 ? 'Good' : 'Fair') : null,
-              features: [...new Set(features)], // Удаляем дубли
-              bonuses: [...new Set(bonuses)].slice(0, 10), // Лимитируем
-              paymentMethods: [...new Set(paymentMethods)].slice(0, 15),
-              licenses: [...new Set(licenses)].slice(0, 5),
-              languages: [...new Set(languages)].slice(0, 10),
-              currencies: [...new Set(currencies)].slice(0, 10),
-              minDeposit: '', // Будет заполнено позже при более детальном парсинге
-              maxWithdrawal: '',
-              withdrawalTime: '',
-              customerSupport: features.includes('live chat') ? '24/7 Live Chat' : '',
-              mobileCompatible: features.includes('mobile') || elementText.toLowerCase().includes('mobile'),
-              liveChat: features.includes('live chat') || elementText.toLowerCase().includes('live chat')
+              provider: 'various'
             };
+
+            // Добавляем score и rating только если они есть
+            if (score !== null && score !== undefined) {
+              casino.score = score;
+              if (score >= 8) casino.rating = 'Excellent';
+              else if (score >= 6) casino.rating = 'Good';
+              else casino.rating = 'Fair';
+            }
+
+            // Добавляем boolean поля только если они true
+            const hasLiveChat = features.includes('live chat') || elementText.toLowerCase().includes('live chat');
+            const hasMobileSupport = features.includes('mobile') || elementText.toLowerCase().includes('mobile');
+            const isLiveGame = false; // Для казино всегда false, но мы не добавляем false значения
+            
+            if (hasLiveChat) {
+              casino.liveChat = true;
+              casino.customerSupport = '24/7 Live Chat';
+            }
+            if (hasMobileSupport) {
+              casino.mobileCompatible = true;
+            }
+            // isLive не добавляем, так как для казино это всегда false
+
+            // Добавляем массивы только если они не пустые
+            const uniqueFeatures = [...new Set(features)];
+            if (uniqueFeatures.length > 0) {
+              casino.features = uniqueFeatures;
+            }
+
+            const uniqueBonuses = [...new Set(bonuses)].slice(0, 10);
+            if (uniqueBonuses.length > 0) {
+              casino.bonuses = uniqueBonuses;
+            }
+
+            const uniquePaymentMethods = [...new Set(paymentMethods)].slice(0, 15);
+            if (uniquePaymentMethods.length > 0) {
+              casino.paymentMethods = uniquePaymentMethods;
+            }
+
+            const uniqueLicenses = [...new Set(licenses)].slice(0, 5);
+            if (uniqueLicenses.length > 0) {
+              casino.licenses = uniqueLicenses;
+            }
+
+            const uniqueLanguages = [...new Set(languages)].slice(0, 10);
+            if (uniqueLanguages.length > 0) {
+              casino.languages = uniqueLanguages;
+            }
+
+            const uniqueCurrencies = [...new Set(currencies)].slice(0, 10);
+            if (uniqueCurrencies.length > 0) {
+              casino.currencies = uniqueCurrencies;
+            }
+
+            // Добавляем строковые поля только если они не пустые
+            if (minDeposit) {
+              casino.minDeposit = minDeposit;
+            }
+            if (maxWithdrawal) {
+              casino.maxWithdrawal = maxWithdrawal;
+            }
+            if (withdrawalTime) {
+              casino.withdrawalTime = withdrawalTime;
+            }
 
             // Добавляем в Map только уникальные казино
             if (!processedCasinos.has(casinoName.toLowerCase())) {

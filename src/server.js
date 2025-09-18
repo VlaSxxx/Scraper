@@ -6,8 +6,6 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { connectDB, getConnectionStats } = require('./config/database');
 const apiRoutes = require('./routes/api');
-const directApiRoutes = require('./routes/direct-api');
-const debugApiRoutes = require('./routes/debug-api');
 const errorHandler = require('./middleware/errorHandler');
 const TaskScheduler = require('./tasks/scheduler');
 const taskRoutes = require('./routes/tasks');
@@ -181,17 +179,9 @@ app.get('/health', async (req, res) => {
 /**
  * API маршруты с приоритетом
  */
-app.use('/api', directApiRoutes); // Расширенные эндпоинты (высший приоритет)
-app.use('/api', apiRoutes); // Базовые эндпоинты
+app.use('/api', apiRoutes); // API эндпоинты
 app.use('/api/tasks', taskRoutes); // Задачи
 
-/**
- * Debug роуты (только в development режиме)
- */
-if (process.env.NODE_ENV === 'development' || process.env.ENABLE_DEBUG_API === 'true') {
-  app.use('/debug', debugApiRoutes);
-  console.log('🐛 Debug API routes enabled at /debug');
-}
 
 /**
  * Корневой маршрут с улучшенной документацией
@@ -204,7 +194,7 @@ app.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     endpoints: {
-      // Базовые эндпоинты
+      // Casino API
       'GET /api/casinos': 'Get all casinos with pagination and filtering',
       'GET /api/casinos/:id': 'Get specific casino by ID',
       'GET /api/casinos/search/:name': 'Search casinos by name',
@@ -212,17 +202,7 @@ app.get('/', (req, res) => {
       'GET /api/top-casinos': 'Get top rated casinos',
       'GET /api/health': 'Check API health',
       
-      // Расширенные эндпоинты v1
-      'GET /api/v1/casinos': 'Advanced casino list with comprehensive filtering',
-      'GET /api/v1/casinos/:id': 'Get specific casino by ID (v1)',
-      'GET /api/v1/casinos/search/advanced': 'Advanced search across multiple fields',
-      'GET /api/v1/casinos/stats/comprehensive': 'Comprehensive casino statistics',
-      'GET /api/v1/casinos/top/advanced': 'Advanced top casinos with filters',
-      'GET /api/v1/tasks/executions': 'Task execution history with filtering',
-      'GET /api/v1/tasks/stats/advanced': 'Advanced task statistics',
-      'GET /api/v1/health/detailed': 'Detailed system health check',
-      
-      // Задачи
+      // Task Management
       'GET /api/tasks': 'Get all scheduled tasks status',
       'POST /api/tasks': 'Create new scheduled task',
       'POST /api/tasks/run': 'Run task once',
@@ -255,8 +235,21 @@ app.use('*', (req, res) => {
       'GET /',
       'GET /health',
       'GET /api/casinos',
+      'GET /api/casinos/:id',
+      'GET /api/casinos/search/:name',
+      'GET /api/stats',
+      'GET /api/top-casinos',
       'GET /api/health',
-      'GET /api/tasks'
+      'GET /api/tasks',
+      'POST /api/tasks',
+      'POST /api/tasks/run',
+      'DELETE /api/tasks/:name',
+      'DELETE /api/tasks',
+      'GET /api/tasks/stats',
+      'GET /api/tasks/:name/executions',
+      'GET /api/tasks/scraping-stats',
+      'POST /api/tasks/cleanup',
+      'GET /api/tasks/health'
     ]
   });
 });

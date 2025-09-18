@@ -31,7 +31,11 @@ const connectDB = async () => {
  */
 const _connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/casino-scores', {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+    
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
       // Оптимизированные настройки пула соединений
       maxPoolSize: 10, // Максимальное количество соединений в пуле
       minPoolSize: 2,  // Минимальное количество соединений в пуле

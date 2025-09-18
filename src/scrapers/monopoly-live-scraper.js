@@ -23,6 +23,57 @@ class MonopolyLiveScraper extends BaseGameScraper {
       
       // Ищем данные о Monopoly Live
       const monopolyData = await this.page.evaluate((config) => {
+        // Функция для извлечения только игровой статистики
+        function extractGameStatistics(text) {
+          const stats = [];
+          
+          // Ищем множители (например: 2x, 5x, 10x, 50x, 100x, 500x)
+          const multipliers = text.match(/(\d+)x/gi);
+          if (multipliers) {
+            multipliers.forEach(m => {
+              const num = parseFloat(m.replace('x', ''));
+              if (num >= 2 && num <= 1000) { // Разумные множители для Monopoly Live
+                stats.push({ type: 'multiplier', value: num });
+              }
+            });
+          }
+          
+          // Ищем проценты RTP (например: 96.23%, 95.43%)
+          const rtpMatches = text.match(/(\d{2,3}\.\d{1,2})%/g);
+          if (rtpMatches) {
+            rtpMatches.forEach(rtp => {
+              const num = parseFloat(rtp.replace('%', ''));
+              if (num >= 90 && num <= 100) { // Разумные RTP для казино игр
+                stats.push({ type: 'rtp', value: num });
+              }
+            });
+          }
+          
+          // Ищем количество раундов/игр (например: "1000 rounds", "500 games")
+          const roundMatches = text.match(/(\d{2,6})\s*(rounds?|games?|spins?)/gi);
+          if (roundMatches) {
+            roundMatches.forEach(match => {
+              const num = parseFloat(match.match(/\d+/)[0]);
+              if (num >= 10 && num <= 100000) { // Разумное количество раундов
+                stats.push({ type: 'rounds', value: num });
+              }
+            });
+          }
+          
+          // Ищем максимальные выигрыши (например: "Max win: 20000x")
+          const maxWinMatches = text.match(/max\s*win[:\s]*(\d{1,6})x?/gi);
+          if (maxWinMatches) {
+            maxWinMatches.forEach(match => {
+              const num = parseFloat(match.match(/\d+/)[0]);
+              if (num >= 100 && num <= 100000) { // Разумные максимальные выигрыши
+                stats.push({ type: 'maxWin', value: num });
+              }
+            });
+          }
+          
+          return stats;
+        }
+        
         const monopoly = {
           name: config.name,
           type: config.type,
@@ -32,19 +83,8 @@ class MonopolyLiveScraper extends BaseGameScraper {
           isLive: config.isLive,
           provider: config.provider,
           score: null,
-          rating: '',
-          features: [...config.features],
-          bonuses: [],
-          paymentMethods: [],
-          licenses: [],
-          languages: [],
-          currencies: [],
-          minDeposit: '',
-          maxWithdrawal: '',
-          withdrawalTime: '',
-          customerSupport: '',
-          mobileCompatible: false,
-          liveChat: false
+          rating: null,
+          features: [...config.features]
         };
 
         console.log('Searching for Monopoly Live data...');
@@ -67,14 +107,14 @@ class MonopolyLiveScraper extends BaseGameScraper {
           try {
             const elementText = element.textContent.trim();
             
-            // Ищем статистику (числа)
-            const numbers = elementText.match(/\d+(?:\.\d+)?/g);
-            if (numbers && numbers.length > 0) {
+            // Ищем игровую статистику (только релевантные числа)
+            const gameStats = extractGameStatistics(elementText);
+            if (gameStats.length > 0) {
               monopoly.stats = {
-                numbers: numbers.map(n => parseFloat(n)),
+                gameStats: gameStats,
                 source: elementText.substring(0, 100)
               };
-              console.log(`Found stats: ${JSON.stringify(monopoly.stats)}`);
+              console.log(`Found game stats: ${JSON.stringify(monopoly.stats)}`);
             }
 
             // Ищем описание

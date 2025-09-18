@@ -158,3 +158,6 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 // Запускаем основную функцию
 main();
 
+
+
+

@@ -12,6 +12,44 @@ class CasinoController {
   }
 
   /**
+   * Дополнительная очистка ответа от пустых полей
+   * @param {Object} data - Данные для очистки
+   * @returns {Object} Очищенные данные
+   */
+  cleanEmptyFields(data) {
+    if (!data || typeof data !== 'object') return data;
+    
+    if (Array.isArray(data)) {
+      return data.map(item => this.cleanEmptyFields(item));
+    }
+    
+    const cleaned = {};
+    for (const [key, value] of Object.entries(data)) {
+      // Пропускаем пустые массивы
+      if (Array.isArray(value) && value.length === 0) continue;
+      
+      // Пропускаем пустые строки
+      if (typeof value === 'string' && value.trim() === '') continue;
+      
+      // Пропускаем false boolean значения для определенных полей
+      if (typeof value === 'boolean' && value === false && 
+          ['isLive', 'mobileCompatible', 'liveChat'].includes(key)) continue;
+      
+      // Рекурсивно очищаем объекты
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const cleanedValue = this.cleanEmptyFields(value);
+        if (Object.keys(cleanedValue).length > 0) {
+          cleaned[key] = cleanedValue;
+        }
+      } else {
+        cleaned[key] = value;
+      }
+    }
+    
+    return cleaned;
+  }
+
+  /**
    * Получение списка казино с фильтрацией
    * GET /api/casinos
    */
@@ -40,7 +78,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: result
+        data: this.cleanEmptyFields(result)
       });
     } catch (error) {
       next(error);
@@ -62,7 +100,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: casinos
+        data: this.cleanEmptyFields(casinos)
       });
     } catch (error) {
       next(error);
@@ -84,7 +122,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: casinos
+        data: this.cleanEmptyFields(casinos)
       });
     } catch (error) {
       next(error);
@@ -119,7 +157,7 @@ class CasinoController {
   async getCasinoById(req, res, next) {
     try {
       const { id } = req.params;
-      const casino = await this.casinoService.repository.findById(id);
+      const casino = await this.casinoService.findById(id);
       
       if (!casino) {
         return res.status(404).json({
@@ -128,11 +166,11 @@ class CasinoController {
         });
       }
 
-      const formattedCasino = this.casinoService.formatCasinoForResponse(casino);
+      const formattedCasino = this.casinoService.formatCasinoForResponse(casino, true);
       
       res.status(200).json({
         success: true,
-        data: formattedCasino
+        data: this.cleanEmptyFields(formattedCasino)
       });
     } catch (error) {
       next(error);
@@ -158,7 +196,7 @@ class CasinoController {
       }
 
       const casino = await this.casinoService.repository.create(req.body);
-      const formattedCasino = this.casinoService.formatCasinoForResponse(casino);
+      const formattedCasino = this.casinoService.formatCasinoForResponse(casino, true);
       
       res.status(201).json({
         success: true,
@@ -199,7 +237,7 @@ class CasinoController {
         });
       }
 
-      const formattedCasino = this.casinoService.formatCasinoForResponse(casino);
+      const formattedCasino = this.casinoService.formatCasinoForResponse(casino, true);
       
       res.status(200).json({
         success: true,
@@ -232,7 +270,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: casino
+        data: this.cleanEmptyFields(casino)
       });
     } catch (error) {
       next(error);
@@ -259,7 +297,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: casino
+        data: this.cleanEmptyFields(casino)
       });
     } catch (error) {
       next(error);
@@ -303,7 +341,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: stats
+        data: this.cleanEmptyFields(stats)
       });
     } catch (error) {
       next(error);
@@ -320,7 +358,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: stats
+        data: this.cleanEmptyFields(stats)
       });
     } catch (error) {
       next(error);
@@ -337,7 +375,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: stats
+        data: this.cleanEmptyFields(stats)
       });
     } catch (error) {
       next(error);
@@ -380,7 +418,7 @@ class CasinoController {
       
       res.status(200).json({
         success: true,
-        data: comparison
+        data: this.cleanEmptyFields(comparison)
       });
     } catch (error) {
       next(error);

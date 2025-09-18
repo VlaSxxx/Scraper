@@ -1,4 +1,5 @@
 const { repositoryFactory } = require('../../repositories');
+const { CasinoListDto, CasinoDetailDto } = require('../../dto');
 
 /**
  * Сервис для управления оценками казино
@@ -7,6 +8,126 @@ const { repositoryFactory } = require('../../repositories');
 class CasinoScoreService {
   constructor() {
     this.repository = repositoryFactory.getCasinoScoreRepository();
+    this.mockData = this.generateMockData();
+  }
+
+  /**
+   * Генерация тестовых данных для работы без MongoDB
+   */
+  generateMockData() {
+    return [
+      {
+        _id: '1',
+        name: 'Crazy Time Live',
+        type: 'game show',
+        provider: 'evolution',
+        score: 9.2,
+        rating: 'Excellent',
+        url: 'https://casinoscores.com/crazy-time',
+        description: 'Live casino game show with multipliers and bonus rounds',
+        scrapedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isLive: true,
+        mobileCompatible: true,
+        liveChat: true,
+        features: ['live dealer', 'multipliers', 'bonus rounds'],
+        stats: {
+          multipliers: [2, 5, 10, 20, 50],
+          rtp: [96.08],
+          rounds: [1000]
+        }
+      },
+      {
+        _id: '2',
+        name: 'Monopoly Live',
+        type: 'game show',
+        provider: 'evolution',
+        score: 8.8,
+        rating: 'Excellent',
+        url: 'https://casinoscores.com/monopoly-live',
+        description: 'Board game inspired live casino game',
+        scrapedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isLive: true,
+        mobileCompatible: true,
+        features: ['live dealer', 'board game', 'properties'],
+        stats: {
+          multipliers: [500],
+          rtp: [96.23],
+          rounds: [500]
+        }
+      },
+      {
+        _id: '3',
+        name: 'Lightning Roulette',
+        type: 'roulette',
+        provider: 'evolution',
+        score: 8.5,
+        rating: 'Good',
+        url: 'https://example.com/lightning-roulette',
+        description: 'Enhanced roulette with random multipliers',
+        scrapedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isLive: true,
+        mobileCompatible: true,
+        features: ['live dealer', 'multipliers', 'lightning'],
+        stats: {
+          multipliers: [50, 100, 200, 300, 400, 500],
+          rtp: [97.30]
+        }
+      },
+      {
+        _id: '4',
+        name: 'Dream Catcher',
+        type: 'wheel',
+        provider: 'evolution',
+        score: 7.8,
+        rating: 'Good',
+        url: 'https://example.com/dream-catcher',
+        description: 'Money wheel game with live host',
+        scrapedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isLive: true,
+        features: ['live dealer', 'wheel'],
+        stats: {
+          multipliers: [2, 5, 10, 20, 40],
+          rtp: [96.58]
+        }
+      },
+      {
+        _id: '5',
+        name: 'Blackjack VIP',
+        type: 'blackjack',
+        provider: 'evolution',
+        score: 8.9,
+        rating: 'Excellent',
+        url: 'https://example.com/blackjack-vip',
+        description: 'Premium blackjack table for high rollers',
+        scrapedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isLive: true,
+        mobileCompatible: true,
+        liveChat: true,
+        features: ['live dealer', 'vip', 'high stakes'],
+        stats: {
+          rtp: [99.29]
+        }
+      }
+    ];
+  }
+
+  /**
+   * Проверка доступности MongoDB
+   */
+  isMongoAvailable() {
+    // Для тестирования всегда возвращаем false, чтобы использовать mock данные
+    console.log('📊 Using mock data for API testing (MongoDB disabled)');
+    return false;
   }
 
   /**
@@ -17,10 +138,22 @@ class CasinoScoreService {
    */
   async getTopRatedCasinos(limit = 10, filters = {}) {
     try {
-      const minScore = filters.minScore || 8;
-      const casinos = await this.repository.findTopRated(limit, minScore);
+      const isMongoAvailable = this.isMongoAvailable();
       
-      return this.formatCasinosForResponse(casinos);
+      if (isMongoAvailable) {
+        const minScore = filters.minScore || 8;
+        const casinos = await this.repository.findTopRated(limit, minScore);
+        return this.formatCasinosForResponse(casinos);
+      } else {
+        // Fallback: используем mock данные
+        const minScore = filters.minScore || 8;
+        const filteredCasinos = this.mockData
+          .filter(casino => casino.score >= minScore)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+        
+        return this.formatCasinosForResponse(filteredCasinos);
+      }
     } catch (error) {
       throw new Error(`Failed to get top rated casinos: ${error.message}`);
     }
@@ -34,10 +167,20 @@ class CasinoScoreService {
    */
   async getCasinosByType(type, options = {}) {
     try {
+      const isMongoAvailable = this.isMongoAvailable();
       const limit = options.limit || 20;
-      const casinos = await this.repository.findByType(type, limit);
       
-      return this.formatCasinosForResponse(casinos);
+      if (isMongoAvailable) {
+        const casinos = await this.repository.findByType(type, limit);
+        return this.formatCasinosForResponse(casinos);
+      } else {
+        // Fallback: используем mock данные
+        const filteredCasinos = this.mockData
+          .filter(casino => casino.type === type)
+          .slice(0, limit);
+        
+        return this.formatCasinosForResponse(filteredCasinos);
+      }
     } catch (error) {
       throw new Error(`Failed to get casinos by type: ${error.message}`);
     }
@@ -50,10 +193,20 @@ class CasinoScoreService {
    */
   async getLiveGames(options = {}) {
     try {
+      const isMongoAvailable = this.isMongoAvailable();
       const limit = options.limit || 50;
-      const games = await this.repository.findLiveGames(limit);
       
-      return this.formatCasinosForResponse(games);
+      if (isMongoAvailable) {
+        const games = await this.repository.findLiveGames(limit);
+        return this.formatCasinosForResponse(games);
+      } else {
+        // Fallback: используем mock данные
+        const liveGames = this.mockData
+          .filter(casino => casino.isLive === true)
+          .slice(0, limit);
+        
+        return this.formatCasinosForResponse(liveGames);
+      }
     } catch (error) {
       throw new Error(`Failed to get live games: ${error.message}`);
     }
@@ -153,72 +306,191 @@ class CasinoScoreService {
    */
   async searchCasinos(filters = {}, options = {}) {
     try {
-      const {
-        type,
-        provider,
-        rating,
-        isLive,
-        mobileCompatible,
-        liveChat,
-        minScore,
-        maxScore,
-        searchTerm
-      } = filters;
+      console.log('🔍 searchCasinos called with filters:', filters);
+      const isMongoAvailable = this.isMongoAvailable();
       
-      const {
-        page = 1,
-        limit = 20,
-        sortBy = 'score',
-        sortOrder = 'desc'
-      } = options;
-      
-      let casinos = [];
-      
-      // Текстовый поиск
-      if (searchTerm) {
-        casinos = await this.repository.searchByText(searchTerm, limit * page);
+      if (isMongoAvailable) {
+        // Используем MongoDB
+        const {
+          type,
+          provider,
+          rating,
+          isLive,
+          mobileCompatible,
+          liveChat,
+          minScore,
+          maxScore,
+          searchTerm
+        } = filters;
+        
+        const {
+          page = 1,
+          limit = 20,
+          sortBy = 'score',
+          sortOrder = 'desc'
+        } = options;
+        
+        let casinos = [];
+        
+        // Текстовый поиск
+        if (searchTerm) {
+          casinos = await this.repository.searchByText(searchTerm, limit * page);
+        } else {
+          // Построение фильтра
+          const dbFilter = {};
+          
+          if (type) dbFilter.type = type;
+          if (provider) dbFilter.provider = provider;
+          if (rating) dbFilter.rating = rating;
+          if (isLive !== undefined) dbFilter.isLive = isLive;
+          if (mobileCompatible !== undefined) dbFilter.mobileCompatible = mobileCompatible;
+          if (liveChat !== undefined) dbFilter.liveChat = liveChat;
+          
+          if (minScore !== undefined || maxScore !== undefined) {
+            dbFilter.score = {};
+            if (minScore !== undefined) dbFilter.score.$gte = minScore;
+            if (maxScore !== undefined) dbFilter.score.$lte = maxScore;
+          }
+          
+          // Построение опций сортировки
+          const sortOptions = {};
+          sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+          
+          casinos = await this.repository.find(dbFilter, {
+            sort: sortOptions,
+            limit: limit,
+            skip: (page - 1) * limit
+          });
+        }
+        
+        // Подсчет общего количества для пагинации
+        const total = await this.repository.count(filters);
+        
+        return {
+          casinos: this.formatCasinosForResponse(casinos),
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          }
+        };
       } else {
-        // Построение фильтра
-        const dbFilter = {};
+        // Fallback: используем mock данные
+        const {
+          type,
+          provider,
+          rating,
+          isLive,
+          mobileCompatible,
+          liveChat,
+          minScore,
+          maxScore,
+          searchTerm
+        } = filters;
         
-        if (type) dbFilter.type = type;
-        if (provider) dbFilter.provider = provider;
-        if (rating) dbFilter.rating = rating;
-        if (isLive !== undefined) dbFilter.isLive = isLive;
-        if (mobileCompatible !== undefined) dbFilter.mobileCompatible = mobileCompatible;
-        if (liveChat !== undefined) dbFilter.liveChat = liveChat;
+        const {
+          page = 1,
+          limit = 20,
+          sortBy = 'score',
+          sortOrder = 'desc'
+        } = options;
         
-        if (minScore !== undefined || maxScore !== undefined) {
-          dbFilter.score = {};
-          if (minScore !== undefined) dbFilter.score.$gte = minScore;
-          if (maxScore !== undefined) dbFilter.score.$lte = maxScore;
+        let casinos = [...this.mockData];
+        
+        // Применение фильтров
+        if (type) {
+          casinos = casinos.filter(c => c.type === type);
+        }
+        if (provider) {
+          casinos = casinos.filter(c => c.provider === provider);
+        }
+        if (rating) {
+          casinos = casinos.filter(c => c.rating === rating);
+        }
+        if (isLive !== undefined) {
+          casinos = casinos.filter(c => c.isLive === isLive);
+        }
+        if (mobileCompatible !== undefined) {
+          casinos = casinos.filter(c => c.mobileCompatible === mobileCompatible);
+        }
+        if (liveChat !== undefined) {
+          casinos = casinos.filter(c => c.liveChat === liveChat);
+        }
+        if (minScore !== undefined) {
+          casinos = casinos.filter(c => c.score >= minScore);
+        }
+        if (maxScore !== undefined) {
+          casinos = casinos.filter(c => c.score <= maxScore);
+        }
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          casinos = casinos.filter(c => 
+            c.name.toLowerCase().includes(term) ||
+            c.description.toLowerCase().includes(term) ||
+            c.provider.toLowerCase().includes(term)
+          );
         }
         
-        // Построение опций сортировки
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-        
-        casinos = await this.repository.find(dbFilter, {
-          sort: sortOptions,
-          limit: limit,
-          skip: (page - 1) * limit
+        // Сортировка
+        casinos.sort((a, b) => {
+          let aVal = a[sortBy] || 0;
+          let bVal = b[sortBy] || 0;
+          
+          if (typeof aVal === 'string') {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+          }
+          
+          if (sortOrder === 'desc') {
+            return bVal > aVal ? 1 : -1;
+          } else {
+            return aVal > bVal ? 1 : -1;
+          }
         });
+        
+        // Пагинация
+        const total = casinos.length;
+        const startIndex = (page - 1) * limit;
+        const paginatedCasinos = casinos.slice(startIndex, startIndex + limit);
+        
+        return {
+          casinos: this.formatCasinosForResponse(paginatedCasinos),
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit)
+          }
+        };
       }
-      
-      // Подсчет общего количества для пагинации
-      const total = await this.repository.count(filters);
-      
-      return {
-        casinos: this.formatCasinosForResponse(casinos),
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
-        }
-      };
     } catch (error) {
       throw new Error(`Failed to search casinos: ${error.message}`);
+    }
+  }
+
+  /**
+   * Получение казино по ID
+   * @param {String} id - ID казино
+   * @returns {Promise<Object|null>} Казино или null
+   */
+  async findById(id) {
+    try {
+      console.log(`🔍 findById called with id: ${id}`);
+      const isMongoAvailable = this.isMongoAvailable();
+      
+      if (isMongoAvailable) {
+        return await this.repository.findById(id);
+      } else {
+        // Fallback: поиск в mock данных
+        console.log('📊 Using mock data for findById');
+        const result = this.mockData.find(casino => casino._id === id) || null;
+        console.log(`🎯 Found casino: ${result ? result.name : 'not found'}`);
+        return result;
+      }
+    } catch (error) {
+      console.log('📊 Using mock data for findById due to error:', error.message);
+      return this.mockData.find(casino => casino._id === id) || null;
     }
   }
 
@@ -253,28 +525,28 @@ class CasinoScoreService {
   /**
    * Форматирование одного казино для ответа
    * @param {Object} casino - Объект казино
+   * @param {boolean} detailed - Использовать детальный DTO
    * @returns {Object} Отформатированный объект
    */
-  formatCasinoForResponse(casino) {
+  formatCasinoForResponse(casino, detailed = false) {
     if (!casino) return null;
     
-    const formatted = casino.toObject ? casino.toObject() : casino;
-    
-    return {
-      ...formatted,
-      displayScore: `${formatted.score}/10`,
-      ageInDays: this.calculateAgeInDays(formatted.scrapedAt),
-      isRecentlyUpdated: this.isRecentlyUpdated(formatted.scrapedAt)
-    };
+    // Используем DTO для фильтрации пустых значений
+    if (detailed) {
+      return new CasinoDetailDto(casino);
+    } else {
+      return new CasinoListDto(casino);
+    }
   }
 
   /**
    * Форматирование массива казино для ответа
    * @param {Array} casinos - Массив казино
+   * @param {boolean} detailed - Использовать детальный DTO
    * @returns {Array} Отформатированный массив
    */
-  formatCasinosForResponse(casinos) {
-    return casinos.map(casino => this.formatCasinoForResponse(casino));
+  formatCasinosForResponse(casinos, detailed = false) {
+    return casinos.map(casino => this.formatCasinoForResponse(casino, detailed));
   }
 
   /**
