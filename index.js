@@ -10,32 +10,45 @@ app.use(express.json());
 app.post('/api/parse', async (req, res) => {
     let browser;
     try {
+        // Сайты для парсинга - просто добавляй через запятую
+        const sites = [
+            'https://casinoscores.com/funky-time/',
+            'https://casinoscores.com/crazy-time/',
+            'https://casinoscores.com/monopoly-live/',
+            'https://casinoscores.com/funky-time/'
+        ];
+
         browser = await puppeteer.launch({ 
             headless: false,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         
-        const page = await browser.newPage();
+        const results = [];
         
-        page.on('error', (err) => {
-            console.error('Page error:', err);
-        });
+        // Парсим все сайты
+        for (const site of sites) {
+            try {
+                const page = await browser.newPage();
+                await page.goto(site, { waitUntil: 'networkidle2', timeout: 30000 });
+                await page.waitForSelector('tbody[data-slot="table-body"]', { timeout: 15000 });
+                
+                const data = await page.evaluate(parsePageData);
+                results.push({ site, data });
+                
+                await page.close();
+                console.log(`✅ Parsed: ${site}`);
+                
+            } catch (error) {
+                results.push({ site, error: error.message });
+                console.log(`❌ Failed: ${site} - ${error.message}`);
+            }
+        }
+
+        res.json({ success: true, results });
         
-        await page.goto('https://casinoscores.com/crazy-time/', { 
-            waitUntil: 'networkidle2',
-            timeout: 30000 
-        });
-        
-        await page.waitForSelector('#playersCounter', { timeout: 15000 });
-
-        const parserData = await page.evaluate(parsePageData);
-
-        console.log('Parsed data:', parserData); 
-
-        res.json({ status: 'success', data: parserData });
     } catch (error) {
-        console.error('Error in parsing:', error);
-        res.status(500).json({ status: 'error', message: error.message });
+        console.error('Error:', error);
+        res.status(500).json({ success: false, error: error.message });
     } finally {
         if (browser) {
             await browser.close();
