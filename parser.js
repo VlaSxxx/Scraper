@@ -2,17 +2,18 @@ const parsePageData = () => {
     const data = {};
     
     const formatFinishedDate = (dateString) => {
-        if (!dateString || dateString === 'N/A') return dateString;
+        if (!dateString || dateString === 'N/A' || dateString.trim() === '') return null;
         const match = dateString.match(/^(\d{1,2}\s+[A-Za-z]{3,4})(\d{4})(\d{2}:\d{2})$/);
         return match ? `${match[1]} ${match[2]} ${match[3]}` : dateString;
     };
     
     const getImageUrl = (element) => {
-        if (!element) return 'N/A';
+        if (!element) return null;
         
         const imgElement = element.querySelector('img');
         if (imgElement) {
-            return imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('srcset')?.split(' ')[0] || 'N/A';
+            const src = imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('srcset')?.split(' ')[0];
+            return src || null;
         }
         
         const elementsWithBg = element.querySelectorAll('[style*="background-image"]');
@@ -22,139 +23,165 @@ const parsePageData = () => {
         }
         
         const logoElement = element.querySelector('[class*="logo"] img, [class*="image"] img, [class*="icon"] img, [data-slot*="image"] img');
-        return logoElement?.src || logoElement?.getAttribute('data-src') || 'N/A';
+        const logoSrc = logoElement?.src || logoElement?.getAttribute('data-src');
+        return logoSrc || null;
     };
 
-    // Функция для проверки валидности объекта данных
-    const isValidData = (obj) => {
-        if (!obj || typeof obj !== 'object') return false;
-        
-        const values = Object.values(obj);
-        // Проверяем, есть ли хотя бы одно значение, которое не равно 'N/A' и не пустое
-        return values.some(value => 
-            value && 
-            value !== 'N/A' && 
-            value !== '' && 
-            value.toString().trim() !== ''
-        );
-    };
-
-    // Функция для фильтрации массивов от пустых элементов
-    const filterValidItems = (array) => {
-        return array.filter(item => isValidData(item));
+    // Простая функция для добавления только валидных полей
+    const addField = (obj, key, value) => {
+        if (value && value.trim && value.trim() !== '') {
+            obj[key] = value.trim();
+        } else if (value && typeof value === 'string' && value !== '') {
+            obj[key] = value;
+        } else if (value && typeof value !== 'string') {
+            obj[key] = value;
+        }
     };
 
     data.BonusCards = [];
     document.querySelectorAll('#BonusCardDesktop > div').forEach(item => {
-        data.BonusCards.push({
-            BonusLabel: item.querySelector('#BonusLabel')?.textContent || 'N/A',
-            BonusLogo: item.querySelector('#BonusLogo')?.textContent || 'N/A',
-            BonusDescription: item.querySelector('#BonusDescription')?.textContent || 'N/A',
-            BonusCTA: item.querySelector('#BonusCTA')?.textContent || 'N/A',
-            BonusImageUrl: getImageUrl(item)
-        });
+        const bonus = {};
+        
+        addField(bonus, 'BonusLabel', item.querySelector('#BonusLabel')?.textContent);
+        addField(bonus, 'BonusLogo', item.querySelector('#BonusLogo')?.textContent);
+        addField(bonus, 'BonusDescription', item.querySelector('#BonusDescription')?.textContent);
+        addField(bonus, 'BonusCTA', item.querySelector('#BonusCTA')?.textContent);
+        addField(bonus, 'BonusImageUrl', getImageUrl(item));
+        
+        if (Object.keys(bonus).length > 0) {
+            data.BonusCards.push(bonus);
+        }
     });
 
     data.CardContent = [];
     document.querySelectorAll('tbody[data-slot="table-body"] > tr[data-slot="table-row"]').forEach(item => {
         const tds = item.querySelectorAll('td[data-slot="table-cell"]');
-        data.CardContent.push({
-            Finished: formatFinishedDate(tds[0]?.textContent.trim() || 'N/A'),
-            SlotResult: tds[1]?.textContent.trim() || 'N/A',
-            SlotImageUrl: getImageUrl(tds[1]),
-            SpinImageUrl: getImageUrl(tds[2]),
-            Payout: tds[4]?.textContent.trim() || 'N/A',
-            Multiplier: tds[3]?.textContent.trim() || 'N/A'
-        });
+        const card = {};
+        
+        addField(card, 'Finished', formatFinishedDate(tds[0]?.textContent?.trim()));
+        addField(card, 'SlotResult', tds[2]?.textContent);
+        addField(card, 'SlotImageUrl', getImageUrl(tds[1]));
+        addField(card, 'SpinImageUrl', getImageUrl(tds[4]));
+        addField(card, 'Payout', tds[3]?.textContent);
+        addField(card, 'Multiplier', tds[4]?.textContent);
+        
+        if (Object.keys(card).length > 0) {
+            data.CardContent.push(card);
+        }
     });
 
     data.TopMultipliers = [];
     document.querySelectorAll('[data-testid="latest-top-multipliers"] table tbody tr').forEach(item => {
-        data.TopMultipliers.push({
-            Finished: formatFinishedDate(item.querySelector('td:first-child')?.textContent?.trim() || 'N/A'),
-            OutcomeImageUrl: getImageUrl(item.querySelector('td:nth-child(2)')),
-            Multiplier: item.querySelector('td:nth-child(3)')?.textContent || 'N/A'
-        });
+        const multiplier = {};
+        
+        addField(multiplier, 'Finished', formatFinishedDate(item.querySelector('td:first-child')?.textContent?.trim()));
+        addField(multiplier, 'OutcomeImageUrl', getImageUrl(item.querySelector('td:nth-child(2)')));
+        addField(multiplier, 'Multiplier', item.querySelector('td:nth-child(3)')?.textContent);
+        
+        if (Object.keys(multiplier).length > 0) {
+            data.TopMultipliers.push(multiplier);
+        }
     });
 
     data.IndividualWins = [];
     document.querySelectorAll('[data-testid="best-individual-wins"] table tbody tr').forEach(item => {
-        data.IndividualWins.push({
-            Finished: formatFinishedDate(item.querySelector('td.text-left')?.textContent?.trim() || 'N/A'),
-            OutcomeImageUrl: getImageUrl(item.querySelector('td:nth-child(2)')),
-            Player: item.querySelector('td:nth-child(3)')?.textContent?.trim() || 'N/A',
-            WonAmount: item.querySelector('td:nth-child(4)')?.textContent?.trim() || 'N/A',
-            Multiplier: item.querySelector('td:nth-child(5)')?.textContent?.trim() || 'N/A'
-        });
+        const win = {};
+        
+        addField(win, 'Finished', formatFinishedDate(item.querySelector('td.text-left')?.textContent?.trim()));
+        addField(win, 'OutcomeImageUrl', getImageUrl(item.querySelector('td:nth-child(2)')));
+        addField(win, 'Player', item.querySelector('td:nth-child(3)')?.textContent);
+        addField(win, 'WonAmount', item.querySelector('td:nth-child(4)')?.textContent);
+        addField(win, 'Multiplier', item.querySelector('td:nth-child(5)')?.textContent);
+        
+        if (Object.keys(win).length > 0) {
+            data.IndividualWins.push(win);
+        }
     });
 
     data.TopSlotMatched = [];
     document.querySelectorAll('div[data-testid="matched-container"]').forEach(item => {
-        const topSlotMatchesText = item.querySelector('div#card[data-slot="card"]')?.textContent || 'N/A';
+        const topSlotMatchesText = item.querySelector('div#card[data-slot="card"]')?.textContent?.trim();
         
         const parseMatches = (text) => {
-            if (!text || text === 'N/A') return { match: 'N/A', noMatch: 'N/A' };
+            if (!text || text === 'N/A') return { match: null, noMatch: null };
             const matchPattern = text.match(/Match(\d+\.?\d*%?).*?No Match(\d+\.?\d*%?)/) ||
                                 text.match(/(\d+\.?\d*%?).*?Match.*?(\d+\.?\d*%?).*?No Match/) ||
                                 text.match(/(\d+\.?\d*%?).*?(\d+\.?\d*%?)/);
             return matchPattern ? 
                 { match: matchPattern[1], noMatch: matchPattern[2] } : 
-                { match: text, noMatch: 'N/A' };
+                { match: text, noMatch: null };
         };
         
         const parsedMatches = parseMatches(topSlotMatchesText);
         
-        data.TopSlotMatched.push({
-            TopSlotName: item.querySelector('div[class*="tw:grid"][class*="tw:grid-cols-12"][class*="tw:gap-4"]')?.textContent || 'N/A',
-            Match: parsedMatches.match,
-            NoMatch: parsedMatches.noMatch
-        });
+        const slot = {};
+        
+        addField(slot, 'TopSlotName', item.querySelector('div[class*="tw:grid"][class*="tw:grid-cols-12"][class*="tw:gap-4"]')?.textContent);
+        addField(slot, 'Match', parsedMatches.match);
+        addField(slot, 'NoMatch', parsedMatches.noMatch);
+        
+        if (Object.keys(slot).length > 0) {
+            data.TopSlotMatched.push(slot);
+        }
     });
 
     data.CrazyFlapper = [];
     document.querySelectorAll('div[data-testid="crazy-bonus-flapper-stats-container"]').forEach(item => {
         const badges = item.querySelectorAll('span[data-slot="badge"]');
-        data.CrazyFlapper.push({
-            AvgMultiplierFlapper1: badges[2]?.textContent || 'N/A',
-            AvgMultiplierFlapper2: badges[1]?.textContent || 'N/A',
-            AvgMultiplierFlapper3: badges[0]?.textContent || 'N/A'
-        });
+        const flapper = {};
+        
+        addField(flapper, 'AvgMultiplierFlapper1', badges[2]?.textContent);
+        addField(flapper, 'AvgMultiplierFlapper2', badges[1]?.textContent);
+        addField(flapper, 'AvgMultiplierFlapper3', badges[0]?.textContent);
+        
+        if (Object.keys(flapper).length > 0) {
+            data.CrazyFlapper.push(flapper);
+        }
     });
 
     data.CrazyFlip = [];
     document.querySelectorAll('div[data-testid="coin-flip-stats-container"]').forEach(item => {
         const values = item.querySelectorAll('p[class*="tw:text-center"][class*="tw:font-bold"][class*="tw:mt-2"]');
-        const value1 = values[0]?.textContent || 'N/A';
-        const value2 = values[1]?.textContent || 'N/A';
+        const value1 = values[0]?.textContent?.trim();
+        const value2 = values[1]?.textContent?.trim();
         
         const parseValue = (val) => {
+            if (!val) return { multiplier: null, percent: null };
             const match = val.match(/^(\d+\.?\d*X)(\d+\.?\d*%)$/);
-            return match ? { multiplier: match[1], percent: match[2] } : { multiplier: 'N/A', percent: 'N/A' };
+            return match ? { multiplier: match[1], percent: match[2] } : { multiplier: null, percent: null };
         };
         
         const parsed1 = parseValue(value1);
         const parsed2 = parseValue(value2);
         
-        data.CrazyFlip.push({
-            BlueFlipsMultiplier1: parsed1.multiplier,
-            BlueFlipsPercent1: parsed1.percent,
-            RedFlipsMultiplier2: parsed2.multiplier,
-            RedFlipsPercent2: parsed2.percent
-        });
+        const flip = {};
+        
+        addField(flip, 'BlueFlipsMultiplier1', parsed1.multiplier);
+        addField(flip, 'BlueFlipsPercent1', parsed1.percent);
+        addField(flip, 'RedFlipsMultiplier2', parsed2.multiplier);
+        addField(flip, 'RedFlipsPercent2', parsed2.percent);
+        
+        if (Object.keys(flip).length > 0) {
+            data.CrazyFlip.push(flip);
+        }
     });
 
     data.CashHuntSymbols = [];
     
-    const parseSymbolItem = (symbolItem) => ({
-        SymbolImageUrl: getImageUrl(symbolItem),
-        Multiplier: symbolItem.querySelector('p[class*="tw:font-bold"]')?.textContent?.trim() || 'N/A',
-        Suffix: symbolItem.querySelector('p[class*="tw:text-xs"]')?.textContent?.trim() || 'N/A'
-    });
+    const parseSymbolItem = (symbolItem) => {
+        const symbol = {};
+        
+        addField(symbol, 'SymbolImageUrl', getImageUrl(symbolItem));
+        addField(symbol, 'Multiplier', symbolItem.querySelector('p[class*="tw:font-bold"]')?.textContent);
+        addField(symbol, 'Suffix', symbolItem.querySelector('p[class*="tw:text-xs"]')?.textContent);
+        
+        return Object.keys(symbol).length > 0 ? symbol : null;
+    };
     
     document.querySelectorAll('div[class*="tw:grid"][class*="tw:grid-cols-5"]').forEach(gridContainer => {
         gridContainer.querySelectorAll('div[class*="tw:flex-col"][class*="tw:items-center"]').forEach(symbolItem => {
             const symbol = parseSymbolItem(symbolItem);
-            if (symbol.SymbolImageUrl !== 'N/A' || symbol.Multiplier !== 'N/A' || symbol.Suffix !== 'N/A') {
+            if (symbol) {
                 data.CashHuntSymbols.push(symbol);
             }
         });
@@ -164,11 +191,15 @@ const parsePageData = () => {
         document.querySelectorAll('div[class*="tw:overflow-x-auto"] div[class*="tw:flex-col"][class*="tw:items-center"]').forEach(symbolItem => {
             const pElements = symbolItem.querySelectorAll('p');
             if (pElements.length >= 2) {
-                data.CashHuntSymbols.push({
-                    SymbolImageUrl: getImageUrl(symbolItem),
-                    Multiplier: pElements[0]?.textContent?.trim() || 'N/A',
-                    Suffix: pElements[1]?.textContent?.trim() || 'N/A'
-                });
+                const symbol = {};
+                
+                addField(symbol, 'SymbolImageUrl', getImageUrl(symbolItem));
+                addField(symbol, 'Multiplier', pElements[0]?.textContent);
+                addField(symbol, 'Suffix', pElements[1]?.textContent);
+                
+                if (Object.keys(symbol).length > 0) {
+                    data.CashHuntSymbols.push(symbol);
+                }
             }
         });
     }
@@ -195,12 +226,16 @@ const parsePageData = () => {
         // Ищем число для AvgBoardRolls (ищем число после процента)
         const avgRollsMatch = allText.match(/(\d+\.\d+)(?!%)/);
         
-        data.BoardMovesStatistics.push({
-            BonusGameStats: bonusGameStats, // 11/295
-            BonusGamePercentage: bonusGamePercentage, // первый процент
-            DoublesRolled: doublesRolled, // 4/41
-            DoublesRolledPercentage: doublesPercentage, // 9.76% - второй процент
-        });
+        const board = {};
+        
+        addField(board, 'BonusGameStats', bonusGameStats);
+        addField(board, 'BonusGamePercentage', bonusGamePercentage);
+        addField(board, 'DoublesRolled', doublesRolled);
+        addField(board, 'DoublesRolledPercentage', doublesPercentage);
+        
+        if (Object.keys(board).length > 0) {
+            data.BoardMovesStatistics.push(board);
+        }
     }
     
     // Если основной селектор не сработал, пробуем альтернативы
@@ -220,13 +255,17 @@ const parsePageData = () => {
                 const percentages = text.match(/\d+\.\d+%/g) || [];
                 const number = text.match(/(\d+\.\d+)(?!%)/);
                 
-                data.BoardMovesStatistics.push({
-                    BonusGameStats: fractions[0] || 'N/A',
-                    BonusGamePercentage: percentages[0] || 'N/A',
-                    DoublesRolled: fractions[1] || 'N/A',
-                    DoublesRolledPercentage: percentages[1] || 'N/A',
-                    AvgBoardRolls: number ? number[1] : 'N/A'
-                });
+                const altBoard = {};
+                
+                addField(altBoard, 'BonusGameStats', fractions[0]);
+                addField(altBoard, 'BonusGamePercentage', percentages[0]);
+                addField(altBoard, 'DoublesRolled', fractions[1]);
+                addField(altBoard, 'DoublesRolledPercentage', percentages[1]);
+                addField(altBoard, 'AvgBoardRolls', number ? number[1] : null);
+                
+                if (Object.keys(altBoard).length > 0) {
+                    data.BoardMovesStatistics.push(altBoard);
+                }
                 break;
             }
         }
@@ -239,11 +278,13 @@ const parsePageData = () => {
             const squareName = row.querySelector('div[class*="tw:left-2"]')?.textContent?.trim() || 'N/A';
             const percentage = row.querySelector('div[class*="tw:bg-"]')?.textContent?.trim() || 'N/A';
             
-            if (squareName !== 'N/A' && percentage !== 'N/A' && squareName.length > 2) {
-                data.MonopolyBigBallerStats.push({
-                    SquareName: squareName,
-                    Percentage: percentage
-                });
+            const monopoly = {};
+            
+            addField(monopoly, 'SquareName', squareName);
+            addField(monopoly, 'Percentage', percentage);
+            
+            if (Object.keys(monopoly).length > 0 && squareName && squareName.length > 2) {
+                data.MonopolyBigBallerStats.push(monopoly);
             }
         });
     });
@@ -257,10 +298,14 @@ const parsePageData = () => {
         // Проверяем что это именно блок с множителями (содержит "Multiplier" или "Cash Award")
         const titleText = titleElement?.textContent?.trim() || '';
         if (titleText.includes('Multiplier') || titleText.includes('Cash Award')) {
-            data.ChanceStatistics.push({
-                MultiplierType: titleText,
-                Percentage: percentage
-            });
+            const chance = {};
+            
+            addField(chance, 'MultiplierType', titleText);
+            addField(chance, 'Percentage', percentage);
+            
+            if (Object.keys(chance).length > 0) {
+                data.ChanceStatistics.push(chance);
+            }
         }
     });
 
@@ -273,22 +318,21 @@ const parsePageData = () => {
         // Проверяем что это именно блок Board Moves (содержит "Bonus Game Stats" или "Doubles Rolled")
         const titleText = titleElement?.textContent?.trim() || '';
         if (titleText.includes('Bonus Game Stats') || titleText.includes('Doubles Rolled')) {
-            data.BoardMovesStats.push({
-                StatType: titleText,
-                Percentage: percentage
-            });
+            const boardMoves = {};
+            
+            addField(boardMoves, 'StatType', titleText);
+            addField(boardMoves, 'Percentage', percentage);
+            
+            if (Object.keys(boardMoves).length > 0) {
+                data.BoardMovesStats.push(boardMoves);
+            }
         }
     });
 
     data.GameRoundHistory = [];
     
     // Собираем все данные Game Round History
-    let gameRoundData = {
-        OptimalBet: 'N/A',
-        TimesWon: 'N/A',
-        TimesWonPercentage: 'N/A', 
-        TotalProfit: 'N/A'
-    };
+    let gameRoundData = {};
     
     document.querySelectorAll('div[class*="tw:flex"][class*="tw:items-center"]').forEach(item => {
         const text = item.textContent?.trim() || '';
@@ -296,27 +340,31 @@ const parsePageData = () => {
         
         // Ищем Optimal Bet (число без текста)
         if (spans.length > 0 && text.match(/^\d+$/) && !text.includes('Times') && !text.includes('Total')) {
-            gameRoundData.OptimalBet = spans[0]?.textContent?.trim() || 'N/A';
+            const optimalBet = spans[0]?.textContent?.trim();
+            if (optimalBet) gameRoundData.OptimalBet = optimalBet;
         }
         
         // Ищем Times Won
         if (text.includes('Times Won') && spans.length > 1) {
-            const timesWonText = spans[1]?.textContent?.trim() || '';
-            const match = timesWonText.match(/^(\d+)\s*\(([^)]+)\)$/);
-            if (match) {
-                gameRoundData.TimesWon = match[1];
-                gameRoundData.TimesWonPercentage = match[2];
+            const timesWonText = spans[1]?.textContent?.trim();
+            if (timesWonText) {
+                const match = timesWonText.match(/^(\d+)\s*\(([^)]+)\)$/);
+                if (match) {
+                    gameRoundData.TimesWon = match[1];
+                    gameRoundData.TimesWonPercentage = match[2];
+                }
             }
         }
         
         // Ищем Total Profit
         if (text.includes('Total Profit') && spans.length > 1) {
-            gameRoundData.TotalProfit = spans[1]?.textContent?.trim() || 'N/A';
+            const totalProfit = spans[1]?.textContent?.trim();
+            if (totalProfit) gameRoundData.TotalProfit = totalProfit;
         }
     });
     
     // Добавляем объединенные данные если есть валидная информация
-    if (gameRoundData.OptimalBet !== 'N/A' || gameRoundData.TimesWon !== 'N/A' || gameRoundData.TotalProfit !== 'N/A') {
+    if (Object.keys(gameRoundData).length > 0) {
         data.GameRoundHistory.push(gameRoundData);
     }
 
@@ -324,51 +372,33 @@ const parsePageData = () => {
     document.querySelectorAll('div[data-testid="single-number-stats"]').forEach(item => {
         const spans = item.querySelectorAll('span');
         if (spans.length >= 2) {
-            data.Temperature.push({
-                Number: spans[0]?.textContent?.trim() || 'N/A',
-                Percentage: spans[spans.length - 1]?.textContent?.trim() || 'N/A'
-            });
+            const temp = {};
+            
+            addField(temp, 'Number', spans[0]?.textContent);
+            addField(temp, 'Percentage', spans[spans.length - 1]?.textContent);
+            
+            if (Object.keys(temp).length > 0) {
+                data.Temperature.push(temp);
+            }
         }
     });
 
 
 
     
-    // Фильтруем все массивы от пустых/невалидных элементов
-    data.BonusCards = filterValidItems(data.BonusCards);
-    data.CardContent = filterValidItems(data.CardContent);
-    data.TopMultipliers = filterValidItems(data.TopMultipliers);
-    data.IndividualWins = filterValidItems(data.IndividualWins);
-    data.TopSlotMatched = filterValidItems(data.TopSlotMatched);
-    data.CrazyFlapper = filterValidItems(data.CrazyFlapper);
-    data.CrazyFlip = filterValidItems(data.CrazyFlip);
-    data.CashHuntSymbols = filterValidItems(data.CashHuntSymbols);
-    data.BoardMovesStatistics = filterValidItems(data.BoardMovesStatistics);
-    data.MonopolyBigBallerStats = filterValidItems(data.MonopolyBigBallerStats);
-    data.ChanceStatistics = filterValidItems(data.ChanceStatistics);
-    data.BoardMovesStats = filterValidItems(data.BoardMovesStats);
-    data.GameRoundHistory = filterValidItems(data.GameRoundHistory);
-    data.Temperature = filterValidItems(data.Temperature);
-
     // Удаляем пустые массивы из итогового объекта
-    const filteredData = {};
+    const result = {};
     Object.keys(data).forEach(key => {
-        if (Array.isArray(data[key])) {
-            // Добавляем массив только если в нем есть элементы
-            if (data[key].length > 0) {
-                filteredData[key] = data[key];
-            }
-        } else {
-            // Для не-массивов добавляем как есть
-            filteredData[key] = data[key];
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+            result[key] = data[key];
         }
     });
 
-    filteredData.error = (Object.keys(filteredData).filter(key => key !== 'error').length === 0) 
-        ? 'No data found'
-        : null;
+    if (Object.keys(result).length === 0) {
+        result.error = 'No data found';
+    }
 
-    return filteredData;
+    return result;
 };
 
 module.exports = parsePageData;
